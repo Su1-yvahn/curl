@@ -1,28 +1,28 @@
-use reqwest::json::get;
-use std::env;
-use std::process;
+mod utils;
+
+use crate::utils::cli;
+use crate::utils::method::MethodType;
+use structopt::StructOpt;
+use crate::utils::get::url_get;
+use crate::utils::post::url_post;
+
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-
-    if args.len() != 2 {
-        eprintln!("Usage: curl <URL>");
-        process::exit(1);
+    let input = cli::Opt::from_args();
+    println!("Requesting URL: {}", input.url);
+    let mut update_method = input.method;
+    if input.json != None || input.data != None {
+        update_method = "POST".to_string();
     }
+    let method: MethodType = match MethodType::get_method_type(&update_method){
+        Ok(m) => m,
+        Err(e) => {eprintln!("Err: {}", e); return;},
+    };
+    println!("Method: {}", update_method);
 
-    let url = &args[1];
-    println!("Requesting URL: {}", url);
-    println!("Method: GET");
-
-    match get(url) {
-        Ok(response) => {
-            let body = response.text().unwrap_or_else(|_| String::from("Failed to read response body."));
-            println!("Response body:\n{}", body);
-        }
-
-        Err(err) => {
-            eprintln!("Error: {}", err);
-        }
-
+    match method {
+        MethodType::GET => {url_get(input.url.as_str());}
+        MethodType::POST => {url_post(input.url.as_str(), &input.data, &input.json)}
     }
+    
 }
